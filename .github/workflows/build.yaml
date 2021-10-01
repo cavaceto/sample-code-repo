@@ -1,0 +1,49 @@
+name: builder
+
+on:
+  push:
+    branches:
+      - 'master'
+
+  pull_request:
+    branches:
+      - 'master'
+
+jobs: 
+##################################
+#         Build Artefacts        #
+##################################
+  container_build:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        component: [ "legs", "arms", "hats", "main" ]
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+ 
+    - name: Login to GitHub Container Registry
+      if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/release-*' }}
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.CR_PAT }}
+          
+    - name: Lint
+      uses: golangci/golangci-lint-action@v2
+      with:
+        version: v1.29
+        working-directory: ${{ matrix.component }}
+      
+    - name: Build
+      id: docker_build
+      uses: docker/build-push-action@v2
+      with:
+        build-args: |
+        context: ${{ matrix.component }}/.
+        push: false
+        file: ${{ matrix.component }}/docker/Dockerfile
+        platforms: linux/amd64
+        tags: |
+           ghcr.io/${{ github.repository_owner }}/podtato-${{ matrix.component }}:${{ github.sha }}
