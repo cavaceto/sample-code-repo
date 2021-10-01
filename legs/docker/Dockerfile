@@ -27,7 +27,7 @@ WORKDIR /dist
 RUN cp /build/podtatoserver .
 
 # Build a small image
-FROM golang:1.11
+FROM scratch
 
 COPY --from=builder /dist/podtatoserver /
 COPY /static  /static
